@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>moodle-publish</id>
+  <title>Access video throught Moodle</title>
+  <tags>
+    <tag>upload</tag>
+    <tag>schedule</tag>
+  </tags>
+  <displayOrder>1000</displayOrder>
+  <description>
+    A Moodle adaption for Opencast upload workflow
+  </description>
+
+  <configuration_panel>
+    <![CDATA[
+      <div id="workflow-configuration">
+
+        <fieldset>
+          <legend>Video Qualities</legend>
+          <ul>
+            <li>
+              <input id="flagQuality360p" name="flagQuality360p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality360p">360p resolution</label>
+            </li>
+            <li>
+              <input id="flagQuality480p" name="flagQuality480p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality480p">480p resolution</label>
+            </li>
+            <li>
+              <input id="flagQuality720p" name="flagQuality720p" type="checkbox" class="configField" value="true" checked="checked"/>
+              <label for="flagQuality720p">720p resolution (HDready)</label>
+            </li>
+            <li>
+              <input id="flagQuality1080p" name="flagQuality1080p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality1080p">1080p resolution (FullHD)</label>
+            </li>
+            <li>
+              <input id="flagQuality2160p" name="flagQuality2160p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality2160p">2160p resolution (UltraHD)</label>
+            </li>
+          </ul>
+        </fieldset>
+      </div>
+
+      <!-- Show or hide the hold and publication configuration panel -->
+      <script type="text/javascript">
+        $('input[name="holdOrPublishToggle"]').change(function(){
+            var show = $(this).val() == 'publish';
+            $('#publicationConfigurationPanel').toggle(show);
+            $('#straightToPublishing').val(show);
+            // Trigger update of the schedule's workflow config
+            $('#straightToPublishing').change();
+        });
+
+        <!-- called on loading an exisiting event -->
+        $('#straightToPublishing').bind('updateConfigUI', function() {
+            var publish = $(this).val().toLowerCase() === 'true';
+            $('#publicationConfigurationPanel').toggle(publish);
+            $('#holdOrPublishToggle_' + (publish ? 'publish':'hold')).prop('checked', 'checked');
+        });
+        
+        /*
+        engageWasChecked = $('#publishToEngage').prop('checked');
+
+        $('input[name="publishToSearch"]').change(function(){
+            if ($(this).is(':checked')) {
+              $('#publishToEngage').prop('checked', engageWasChecked);
+              $('#publishToEngage').prop('disabled', false);
+            } else if (!$(this).is(':checked')) {
+              engageWasChecked = $('#publishToEngage').prop('checked');
+              $('#publishToEngage').prop('disabled', true);
+              $('#publishToEngage').prop('checked', false);
+            }
+        });
+        */
+      </script>
+    ]]>
+  </configuration_panel>
+
+  <operations>
+
+    <!-- Apply the default workflow configuration -->
+
+    <operation
+      id="defaults"
+      description="Applying default configuration values">
+      <configurations>
+        <configuration key="straightToPublishing">true</configuration>
+        <configuration key="flagQuality360p">false</configuration>
+        <configuration key="flagQuality480p">false</configuration>
+        <configuration key="flagQuality720p">true</configuration>
+        <configuration key="flagQuality1080p">false</configuration>
+        <configuration key="flagQuality2160p">false</configuration>
+        <configuration key="publishToEngage">true</configuration>
+        <configuration key="publishToApi">true</configuration>
+        <configuration key="uploadedSearchPreview">false</configuration>
+        <configuration key="thumbnailType">0</configuration>
+        <configuration key="thumbnailPosition">1</configuration>
+      </configurations>
+    </operation>
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Prepare asset                                                     -->
+    <!--                                                                   -->
+    <!-- Prepare the recording for asset management, including creation of -->
+    <!-- previews, audio waveforms and storing of the recording data in    -->
+    <!-- the asset area for further processing.                            -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Make sure all elements are downloaded from external sources and   -->
+    <!-- inside of Opencast                                                -->
+
+    <operation
+      id="include"
+      description="Finalize upload and ingest">
+      <configurations>
+        <configuration key="workflow-id">partial-ingest</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Archive the source material -->
+
+    <operation
+      id="snapshot"
+      description="Archive raw recording after ingest">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Prepare the work media                                            -->
+    <!--                                                                   -->
+    <!-- Ensure the work media is in a format that allows Opencast to do   -->
+    <!-- its work. This includes potentially rewriting the container and   -->
+    <!-- making sure that the audio track is part of each video track.     -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Prepare presenter track -->
+
+    <operation
+        id="prepare-av"
+        exception-handler-workflow="partial-error"
+        description="Preparing presenter (camera) audio and video work versions">
+      <configurations>
+        <configuration key="source-flavor">presenter/source</configuration>
+        <configuration key="target-flavor">presenter/prepared</configuration>
+        <configuration key="target-tags">archive</configuration>
+        <configuration key="rewrite">false</configuration>
+        <configuration key="audio-muxing-source-flavors">*/?,*/*</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Prepare presentation track -->
+
+    <operation
+        id="prepare-av"
+        exception-handler-workflow="partial-error"
+        description="Preparing presentation (screen) audio and video work version">
+      <configurations>
+        <configuration key="source-flavor">presentation/source</configuration>
+        <configuration key="target-flavor">presentation/prepared</configuration>
+        <configuration key="rewrite">false</configuration>
+        <configuration key="target-tags">archive</configuration>
+        <configuration key="audio-muxing-source-flavors">*/?,*/*</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Create preview artifacts -->
+
+    <operation
+      id="include"
+      description="Prepare preview versions of the recording">
+      <configurations>
+        <configuration key="workflow-id">partial-preview</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Archive with previews generated -->
+
+    <operation
+      id="snapshot"
+      description="Archive preview information">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Publish                                                           -->
+    <!--                                                                   -->
+    <!-- Encode and publish the recording to the selected publication      -->
+    <!-- channels, unless review for cutting has been selected.            -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Encode and publish -->
+
+    <operation
+      id="include"
+      if="${straightToPublishing}"
+      description="Publish the recording">
+      <configurations>
+        <configuration key="workflow-id">partial-publish</configuration>
+      </configurations>
+    </operation>
+
+
+    <!-- <operation
+      id="publish-engage"
+      exception-handler-workflow="partial-error"
+      description="Update recording in Opencast Media Module">
+      <configurations>
+        <configuration key="download-source-flavors">${download-source-flavors},dublincore/*,security/*</configuration>
+        <configuration key="download-source-tags">engage-download</configuration>
+        <configuration key="streaming-source-tags">engage-streaming</configuration>
+        <configuration key="strategy">merge</configuration>
+        <configuration key="check-availability">false</configuration>
+      </configurations>
+    </operation> -->
+
+
+
+     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Encode for publication to Engage                                  -->
+    <!--                                                                   -->
+    <!-- Encode audio and video formats to the distribution formats that   -->
+    <!-- are required by the Engage publication channel.                   -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Encode presenter (camera) to Engage player format -->
+    <operation
+      if="${flagQuality360p}"
+      id="encode"
+      exception-handler-workflow="partial-error"
+      description="Encoding 360p video to MP4 download">
+      <configurations>
+        <configuration key="source-flavor">*/themed</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,360p-quality</configuration>
+        <configuration key="encoding-profile">adaptive-360p.http</configuration>
+      </configurations>
+    </operation>
+    <operation
+      if="${flagQuality480p}"
+      id="encode"
+      exception-handler-workflow="partial-error"
+      description="Encoding 480p video to MP4 download">
+      <configurations>
+        <configuration key="source-flavor">*/themed</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,480p-quality</configuration>
+        <configuration key="encoding-profile">adaptive-480p.http</configuration>
+      </configurations>
+    </operation>
+    <operation
+      if="${flagQuality720p}"
+      id="encode"
+      exception-handler-workflow="partial-error"
+      description="Encoding 720p video to MP4 download">
+      <configurations>
+        <configuration key="source-flavor">*/themed</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,720p-quality</configuration>
+        <configuration key="encoding-profile">adaptive-720p.http</configuration>
+      </configurations>
+    </operation>
+    <operation
+      if="${flagQuality1080p}"
+      id="encode"
+      exception-handler-workflow="partial-error"
+      description="Encoding 1080p video to MP4 download">
+      <configurations>
+        <configuration key="source-flavor">*/themed</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,1080p-quality</configuration>
+        <configuration key="encoding-profile">adaptive-1080p.http</configuration>
+      </configurations>
+    </operation>
+    <operation
+      if="${flagQuality2160p}"
+      id="encode"
+      exception-handler-workflow="partial-error"
+      description="Encoding 2160p video to MP4 download">
+      <configurations>
+        <configuration key="source-flavor">*/themed</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,2160p-quality</configuration>
+        <configuration key="encoding-profile">adaptive-2160p.http</configuration>
+      </configurations>
+    </operation>
+    <operation
+      id="composite"
+      description="Create YouTube compatible output"
+      if="${publishToYouTube}"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error">
+      <configurations>
+        <configuration key="source-flavor-lower">presentation/themed</configuration>
+        <configuration key="source-flavor-upper">presenter/themed</configuration>
+        <configuration key="encoding-profile">mp4-preview.dual.http</configuration>
+        <configuration key="target-flavor">composite/delivery</configuration>
+        <configuration key="target-tags">youtube</configuration>
+        <configuration key="output-resolution">1280x800</configuration>
+        <configuration key="output-background">0x000000FF</configuration>
+        <configuration key="layout">preview</configuration>
+        <configuration key="layout-preview">
+          {"horizontalCoverage":0.5,"anchorOffset":{"referring":{"left":1.0,"top":0.0},"reference":{"left":1.0,"top":0.0},"offset":{"x":0,"y":0}}};
+          {"horizontalCoverage":0.5,"anchorOffset":{"referring":{"left":0.0,"top":0.0},"reference":{"left":0.0,"top":0.0},"offset":{"x":0,"y":0}}};
+        </configuration>
+      </configurations>
+    </operation>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Segment video streams and extract metadata                        -->
+    <!--                                                                   -->
+    <!-- Apply the video segmentation algorithm to the presentation tracks -->
+    <!-- and extract segment preview images and metadata.                  -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Run the videosegmentation -->
+
+    <operation
+      id="segment-video"
+      fail-on-error="false"
+      description="Detecting slide transitions in presentation track">
+      <configurations>
+        <configuration key="source-flavor">presentation/themed</configuration>
+        <configuration key="target-tags">engage-download</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Generate segment preview images -->
+
+    <operation
+      id="segmentpreviews"
+      fail-on-error="false"
+      description="Creating preview images for presentation segments">
+      <configurations>
+        <configuration key="source-flavor">presentation/themed</configuration>
+        <configuration key="target-flavor">presentation/segment+preview</configuration>
+        <configuration key="reference-flavor">presentation/delivery</configuration>
+        <configuration key="reference-tags">engage-download</configuration>
+        <configuration key="target-tags">engage-download</configuration>
+        <configuration key="encoding-profile">player-slides.http</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Extract text form slide preview images -->
+
+    <operation
+      id="extract-text"
+      fail-on-error="false"
+      description="Extracting text from presentation segments">
+      <configurations>
+        <configuration key="source-flavor">presentation/themed</configuration>
+        <configuration key="target-tags">engage-download</configuration>
+      </configurations>
+    </operation>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Publish to publication channels                                   -->
+    <!--                                                                   -->
+    <!-- Send the encoded material along with the metadata to the          -->
+    <!-- publication channels.                                             -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Publish to engage player -->
+
+    <operation
+      id="publish-engage"
+      if="${publishToEngage}"
+      max-attempts="2"
+      exception-handler-workflow="partial-error"
+      description="Publishing to Opencast Media Module">
+      <configurations>
+        <configuration key="download-source-flavors">dublincore/*,security/*</configuration>
+        <configuration key="download-source-tags">engage-download,atom,rss,mobile</configuration>
+        <configuration key="streaming-source-tags">engage-streaming</configuration>
+        <configuration key="check-availability">false</configuration>
+      </configurations>
+    </operation>
+    
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <!-- Archive                                                           -->
+    <!--                                                                   -->
+    <!-- Download from external ingest nodes, tag, inspect and and prepare -->
+    <!-- source recording and metadata catalogs.                           -->
+    <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+    <!-- Archive the recording -->
+
+    <operation
+      id="snapshot"
+      if="${straightToPublishing}"
+      description="Archive publishing information">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Clean up work artifacts -->
+
+    <operation
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
+      <configurations>
+        <configuration key="delete-external">true</configuration>
+        <!-- FixMe Don't clean up ACLs until workflow service no longer looks for them in the WFR. -->
+        <configuration key="preserve-flavors">security/*</configuration>
+      </configurations>
+    </operation>
+
+  </operations>
+
+</definition>
