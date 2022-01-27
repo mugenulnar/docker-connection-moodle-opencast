@@ -45,20 +45,6 @@ services:
       opencast-network:
         ipv4_address: 172.16.0.4
 
-  nginx:
-    image: nginx
-    volumes:
-      - ./nginx/nginx-templates:/etc/nginx/templates
-      - ./nginx/certs:/etc/ssl/certs/opencast
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      - APPLICATION_URL=http://172.16.0.8
-    networks:
-      opencast-network:
-        ipv4_address: 172.16.0.7
-
   opencast:
     image: quay.io/opencast/allinone:11.2
     environment:
@@ -83,9 +69,7 @@ services:
     volumes:
       - ./etc:/opencast/etc 
 
+
 networks:
   opencast-network:
-    name: external-opencast-net
-    ipam:
-      config:
-        - subnet: 172.16.0.0/24
+    name: external-opencast-moodle-network
