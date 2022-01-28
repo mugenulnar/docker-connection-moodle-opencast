@@ -1,6 +1,6 @@
 # Global repository for Moodle and Opencast integration with Docker
 
-![alt text](https://github.com/mugenulnar/docker-connection-moodle-opencast/blob/main/README/docker-moodle-opencast.png?raw=true)
+![alt text](https://github.com/mugenulnar/docker-connection-moodle-opencast/blob/main/README/docker-moodle-opencast-elk.png?raw=true)
 
 This is the global view of how this project will going to work.
 
